@@ -197,10 +197,41 @@ router.post('/comment/:id', [
         console.error(error.message)
         res.status(500).send('Server Error')
     }
-
-
-
 })
 
+// @route DELETE api/Posts/comment/:post_id/:comment_id
+// @desc  Delete comment from a post
+// @access Private
+router.delete('/comment/:post_id/:comment_id', authMiddleware, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.post_id)
+        // pull out comment
+        const comment = post.comments.find(comment => comment.id === req.params.comment_id)
+
+        // Make sure comment exist
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment does not exist' })
+        }
+        // Check if user created that comment.
+        if (comment.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' })
+        }
+
+        // Get removed index
+        const removeIndex = post.comments
+            .map(comment => comment._id.toString())  //if error occured try comment.user.toString()
+            .indexOf(req.params.comment_id)
+
+        post.comments.splice(removeIndex, 1)
+
+        await post.save()
+
+        res.json(post.comments)
+
+    } catch (error) {
+        console.error(error.message)
+        res.status(500).send('Server Error')
+    }
+})
 
 module.exports = router;
